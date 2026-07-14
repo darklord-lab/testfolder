@@ -16,14 +16,22 @@ exports.startTest = (req, res) => {
 
     // Fetch questions, excluding correct_answer and explanation
     const questionsResult = db.query(
-      'SELECT id, test_id, question_text, question_type, options, image_url, marks, negative_marks FROM questions WHERE test_id = ? ORDER BY id ASC',
+      'SELECT id, test_id, question_text, question_type, options, image_url, marks, negative_marks, section FROM questions WHERE test_id = ? ORDER BY id ASC',
       [testId]
     );
 
-    const questions = questionsResult.rows.map(q => ({
+    let questions = questionsResult.rows.map(q => ({
       ...q,
       options: JSON.parse(q.options)
     }));
+
+    if (test.randomize_questions === 1) {
+      // Fisher-Yates shuffle
+      for (let i = questions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [questions[i], questions[j]] = [questions[j], questions[i]];
+      }
+    }
 
     res.json({
       id: test.id,
@@ -39,7 +47,7 @@ exports.startTest = (req, res) => {
 
 // Submit test attempt and calculate scores
 exports.submitAttempt = (req, res) => {
-  const { testId, studentName, timeTaken, answers } = req.body;
+  const { testId, studentName, timeTaken, answers, questionOrder } = req.body;
   // answers is an object: { [questionId]: [selectedOptionIndexes] or [numericalAnswerString] }
 
   if (!testId || !studentName || timeTaken === undefined || !answers) {
@@ -57,6 +65,11 @@ exports.submitAttempt = (req, res) => {
     const questionsResult = db.query('SELECT * FROM questions WHERE test_id = ?', [testId]);
     const questions = questionsResult.rows;
 
+    const questionsMap = {};
+    questions.forEach(q => {
+      questionsMap[q.id] = q;
+    });
+
     let score = 0;
     let correctCount = 0;
     let wrongCount = 0;
@@ -64,9 +77,19 @@ exports.submitAttempt = (req, res) => {
     
     const processedAnswers = [];
 
+    // Determine the order to grade and insert
+    let orderedQuestionIds = [];
+    if (questionOrder && Array.isArray(questionOrder) && questionOrder.length > 0) {
+      orderedQuestionIds = questionOrder;
+    } else {
+      orderedQuestionIds = questions.map(q => q.id);
+    }
+
     // 3. Grade each question
-    questions.forEach((q) => {
-      const qId = q.id;
+    orderedQuestionIds.forEach((qId) => {
+      const q = questionsMap[qId];
+      if (!q) return;
+
       const selected = answers[qId]; // Array or undefined
       const correctAns = JSON.parse(q.correct_answer); // Array
       
@@ -252,7 +275,7 @@ exports.getAttemptDetails = (req, res) => {
        FROM student_answers sa
        JOIN questions q ON sa.question_id = q.id
        WHERE sa.attempt_id = ?
-       ORDER BY q.id ASC`,
+       ORDER BY sa.id ASC`,
       [id]
     );
 

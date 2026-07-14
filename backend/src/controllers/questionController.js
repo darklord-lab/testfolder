@@ -11,7 +11,8 @@ exports.addQuestion = (req, res) => {
     correct_answer, // Array containing index/indices (for MCQs) or numerical answer value: e.g., [0], [0, 2], ["4.2"]
     explanation,
     marks,
-    negative_marks
+    negative_marks,
+    section
   } = req.body;
 
   if (!question_text || !question_type || !options || !correct_answer) {
@@ -20,17 +21,18 @@ exports.addQuestion = (req, res) => {
 
   try {
     // Check if test exists
-    const testCheck = db.query('SELECT id FROM tests WHERE id = ?', [testId]);
+    const testCheck = db.query('SELECT id, marks, negative_marks FROM tests WHERE id = ?', [testId]);
     if (testCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Test not found' });
     }
+    const testInfo = testCheck.rows[0];
 
-    const marksVal = marks !== undefined ? parseFloat(marks) : 4;
-    const negMarksVal = negative_marks !== undefined ? parseFloat(negative_marks) : -1;
+    const marksVal = marks !== undefined ? parseFloat(marks) : (testInfo.marks !== null ? testInfo.marks : 4.0);
+    const negMarksVal = negative_marks !== undefined ? parseFloat(negative_marks) : (testInfo.negative_marks !== null ? testInfo.negative_marks : -1.0);
 
     const result = db.query(
-      `INSERT INTO questions (test_id, question_text, question_type, options, image_url, correct_answer, explanation, marks, negative_marks) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO questions (test_id, question_text, question_type, options, image_url, correct_answer, explanation, marks, negative_marks, section) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         testId,
         question_text,
@@ -40,7 +42,8 @@ exports.addQuestion = (req, res) => {
         JSON.stringify(correct_answer),
         explanation || '',
         marksVal,
-        negMarksVal
+        negMarksVal,
+        section || 'Physics'
       ]
     );
 
@@ -65,7 +68,8 @@ exports.updateQuestion = (req, res) => {
     correct_answer,
     explanation,
     marks,
-    negative_marks
+    negative_marks,
+    section
   } = req.body;
 
   if (!question_text || !question_type || !options || !correct_answer) {
@@ -78,7 +82,7 @@ exports.updateQuestion = (req, res) => {
 
     const result = db.query(
       `UPDATE questions 
-       SET question_text = ?, question_type = ?, options = ?, image_url = ?, correct_answer = ?, explanation = ?, marks = ?, negative_marks = ?
+       SET question_text = ?, question_type = ?, options = ?, image_url = ?, correct_answer = ?, explanation = ?, marks = ?, negative_marks = ?, section = ?
        WHERE id = ? AND test_id = ?`,
       [
         question_text,
@@ -89,6 +93,7 @@ exports.updateQuestion = (req, res) => {
         explanation || '',
         marksVal,
         negMarksVal,
+        section || 'Physics',
         questionId,
         testId
       ]

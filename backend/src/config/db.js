@@ -11,6 +11,14 @@ const schemaPath = path.resolve(__dirname, '../schema.sql');
 if (fs.existsSync(schemaPath)) {
   const schema = fs.readFileSync(schemaPath, 'utf8');
   db.exec(schema);
+  
+  // Safe migration to add randomize_questions column to tests table if not exists
+  try {
+    db.exec("ALTER TABLE tests ADD COLUMN randomize_questions INTEGER DEFAULT 0;");
+    console.log("Migration: Added randomize_questions column to tests table.");
+  } catch (e) {
+    // Column already exists, safe to ignore
+  }
 } else {
   console.warn('schema.sql file not found at:', schemaPath);
 }

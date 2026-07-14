@@ -5,20 +5,37 @@ CREATE TABLE IF NOT EXISTS tests (
   name TEXT NOT NULL,
   duration INTEGER NOT NULL, -- in minutes
   is_published INTEGER DEFAULT 0, -- 0 = unpublished, 1 = published
+  marks REAL DEFAULT 4.0,
+  negative_marks REAL DEFAULT -1.0,
+  randomize_questions INTEGER DEFAULT 0, -- 0 = no, 1 = yes
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS questions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  test_id INTEGER NOT NULL,
+  test_id INTEGER, -- Nullable to allow general bulk upload
   question_text TEXT NOT NULL,
-  question_type TEXT NOT NULL, -- 'SINGLE', 'MULTIPLE', 'NUMERICAL'
-  options TEXT NOT NULL, -- JSON string array: '["Option A", "Option B", ...]'
+  question_type TEXT DEFAULT 'SINGLE',
+  options TEXT, -- JSON options (nullable)
   image_url TEXT,
-  correct_answer TEXT NOT NULL, -- JSON string representing correct answers: '[0]' or '[0,2]' or '["15.5"]'
+  correct_answer TEXT, -- JSON correct answers (nullable)
   explanation TEXT,
   marks REAL DEFAULT 4,
   negative_marks REAL DEFAULT -1,
+  section TEXT DEFAULT 'Physics',
+  
+  -- New Excel & PDF Bulk Upload Columns
+  exam TEXT,
+  subject TEXT,
+  chapter TEXT,
+  option_a TEXT,
+  option_b TEXT,
+  option_c TEXT,
+  option_d TEXT,
+  correct_option TEXT,
+  difficulty TEXT,
+  year INTEGER,
+  
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (test_id) REFERENCES tests (id) ON DELETE CASCADE
 );
@@ -48,3 +65,23 @@ CREATE TABLE IF NOT EXISTS student_answers (
   FOREIGN KEY (attempt_id) REFERENCES student_attempts (id) ON DELETE CASCADE,
   FOREIGN KEY (question_id) REFERENCES questions (id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS teachers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS students (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  roll_number TEXT UNIQUE NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO teachers (id, name, username, password) VALUES (1, 'Test Teacher', 'teacher', 'password123');
+INSERT OR IGNORE INTO students (id, name, roll_number, username, password) VALUES (1, 'Soham Nandanwar', 'VU1F2122', 'soham', 'password123');

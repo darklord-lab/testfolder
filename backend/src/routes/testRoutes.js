@@ -10,6 +10,7 @@ router.get('/:id', testController.getTestById);
 router.put('/:id', testController.updateTest);
 router.delete('/:id', testController.deleteTest);
 router.patch('/:id/publish', testController.publishTest);
+router.post('/:id/generate-custom', testController.generateCustomTest);
 
 // Student start test route (Questions are stripped of answers and explanations)
 router.get('/:testId/start', attemptController.startTest);
